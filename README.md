@@ -1,2 +1,2 @@
-![](pictures/cover.png)
+![](pictures/cover.jp2)
 # Visualizing convolutional filters using PyTorch
