@@ -1,2 +1,2 @@
-# visualizing-cnn-filters
-Visualizing CNN filters using PyTorch
+![](pictures/cover.png)
+# Visualizing convolutional filters using PyTorch
