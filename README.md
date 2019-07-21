@@ -5,7 +5,7 @@
 
 ## Getting Started
 
-Use this google [colab notebook](https://colab.research.google.com/drive/1Hss38sNd-DvZozwfi6dLGEgjbb0FjTI0) or create a conda environment to run the notebooks on your computer.
+Create a conda environment with the required dependencies in order to run the notebooks on your computer.
 
 Install anaconda and then run:
 ```
