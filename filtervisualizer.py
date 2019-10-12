@@ -6,6 +6,7 @@ from fastai.conv_learner import *
 class SaveFeatures():
     def __init__(self, module):
         self.hook = module.register_forward_hook(self.hook_fn)
+        self.features = None
 
     def hook_fn(self, module, _input, output):
         self.features = output
@@ -25,6 +26,8 @@ class FilterVisualizer():
         self.model = model
         set_trainable(self.model, False)
         self.cpu = cpu
+        self.train_tfms, self.val_tfms = tfms_from_model(self.model, self.size)
+        self.output = None
 
     def visualize(self,
                   layer,
@@ -34,8 +37,7 @@ class FilterVisualizer():
                   print_losses=False,
                   layer_name_plot=None,
                   blur=None, ):
-        sz = self.size
-        img = (np.random.random((sz, sz, 3)) * 20 + 128.) / 255.
+        img = (np.random.random((self.size, self.size, 3)) * 20 + 128.) / 255.
         activations = SaveFeatures(layer)  # register hook
 
         for i in range(self.upscaling_steps
@@ -45,9 +47,8 @@ class FilterVisualizer():
                 opt_steps_ = int(opt_steps * 1.3)
             else:
                 opt_steps_ = opt_steps
-            train_tfms, val_tfms = tfms_from_model(self.model, sz)
             img_var = V(
-                val_tfms(img)[None],
+                self.val_tfms(img)[None],
                 requires_grad=True)  # convert image to variable that requires grad
             optimizer = torch.optim.Adam([img_var], lr=lr, weight_decay=1e-6)
 
@@ -62,12 +63,12 @@ class FilterVisualizer():
                 loss.backward()
                 optimizer.step()
 
-            img = val_tfms.denorm(img_var.data.cpu().numpy()[0].transpose(
+            img = self.val_tfms.denorm(img_var.data.cpu().numpy()[0].transpose(
                 1, 2, 0))
 
             self.output = img
-            sz = int(self.upscaling_factor * sz)  # calculate new image sz
-            img = cv2.resize(img, (sz, sz),
+            up_size = int(self.upscaling_factor * self.size)  # calculate new image size
+            img = cv2.resize(img, (up_size, up_size),
                              interpolation=cv2.INTER_CUBIC)  # scale image up
 
             if blur:
@@ -86,18 +87,15 @@ class FilterVisualizer():
         plt.imsave(f'layer_{layer_name_plot}_conv_filter_{conv_filter}.png',
                    np.clip(self.output, 0, 1))
 
-    def get_transformed_img(self, img, sz):
-        train_tfms, val_tfms = tfms_from_model(self.model, sz)
-
+    def get_transformed_img(self, img):
         if self.cpu:
-            return val_tfms.denorm(np.rollaxis(val_tfms(img)[None], 1, 4))[0]
+            return self.val_tfms.denorm(np.rollaxis(self.val_tfms(img)[None], 1, 4))[0]
 
-        return val_tfms.denorm(np.rollaxis(to_np(val_tfms(img)[None]), 1,
-                                           4))[0]
+        return self.val_tfms.denorm(np.rollaxis(to_np(self.val_tfms(img)[None]), 1,
+                                                4))[0]
 
     def most_activated(self, image, layer):
-        train_tfms, val_tfms = tfms_from_model(self.model, 224)
-        transformed = val_tfms(image)
+        transformed = self.val_tfms(image)
 
         activations = SaveFeatures(layer)  # register hook
         self.model(V(transformed)[None])
