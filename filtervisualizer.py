@@ -94,13 +94,12 @@ class FilterVisualizer():
         return self.val_tfms.denorm(np.rollaxis(to_np(self.val_tfms(img)[None]), 1,
                                                 4))[0]
 
-    def most_activated(self, image, layer):
-        transformed = self.val_tfms(image)
+    def most_activated(self, image_arr, layer):
+        transformed = self.val_tfms(image_arr)
 
         activations = SaveFeatures(layer)  # register hook
         self.model(V(transformed)[None])
 
-        print(activations.features[0, 5].mean().data.cpu().numpy())
         mean_act = [
             activations.features[0, i].mean().data.cpu().numpy()
             for i in range(activations.features.shape[1])
